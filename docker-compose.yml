@@ -1,0 +1,17 @@
+version: "3"
+services:
+  postgres:
+    image: postgres:10
+    environment:
+      POSTGRES_DB: ariadb
+      POSTGRES_USER: aria
+      POSTGRES_PASSWORD: music
+    restart: always
+  dbapp:
+    image: openjdk:11
+    entrypoint: java -jar /app/libs/aria.jar
+    volumes:
+    - ./build:/app:ro
+    ports:
+    - 8080:8080
+    restart: on-failure:3
