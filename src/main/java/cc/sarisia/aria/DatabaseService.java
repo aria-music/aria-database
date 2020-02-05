@@ -19,8 +19,12 @@ import java.util.stream.Collectors;
 
 @Repository
 public class DatabaseService {
+    private final NamedParameterJdbcTemplate db;
+
     @Autowired
-    private NamedParameterJdbcTemplate db;
+    public DatabaseService(NamedParameterJdbcTemplate db) {
+        this.db = db;
+    }
 
     @SneakyThrows
     public SearchResult search(String query, String provider, int offset, int limit) {
@@ -71,11 +75,11 @@ public class DatabaseService {
     }
 
     @SneakyThrows
-    public Entry resolveCache(ResolveRequest request) {
+    public Entry resolveCache(String uri) {
         var QUERY = "SELECT * FROM entry WHERE uri = ?";
         return db.getJdbcTemplate().queryForObject(
                 QUERY,
-                new Object[]{request.getUri()},
+                new Object[]{uri},
                 (rs, i) -> {
                     var entry = new Entry();
                     entry.setUri(rs.getString(1));
@@ -104,11 +108,11 @@ public class DatabaseService {
     }
 
     @SneakyThrows
-    public ExtendedGPMEntry resolveGPM(ResolveRequest request) {
+    public ExtendedGPMEntry resolveGPM(String uri) {
         var QUERY = "SELECT * FROM gpm_meta WHERE id = ?";
         var gpm = db.getJdbcTemplate().queryForObject(
                 QUERY,
-                new Object[]{request.getUri()},
+                new Object[]{uri},
                 (rs, i) -> {
                     var g = new GPMEntry();
                     g.setUri(rs.getString(1));
@@ -144,7 +148,7 @@ public class DatabaseService {
     @SneakyThrows
     public SearchGPMResult searchGPM(String query, int offset, int limit) {
         var QUERY = "SELECT * FROM gpm_meta " +
-                "WHERE title || artist || album like ? " +
+                "WHERE gpmUser || title || artist || album like ? " +
                 "LIMIT ? OFFSET ?";
         var results = db.getJdbcTemplate().query(
                 QUERY,
@@ -206,10 +210,10 @@ public class DatabaseService {
     }
 
     @SneakyThrows
-    public void createPlaylist(CreatePlaylistRequest request) {
+    public void createPlaylist(String name) {
         var QUERY = "INSERT INTO playlist VALUES (DEFAULT, ?, ?, ?)";
         db.getJdbcTemplate().update(
-                QUERY, request.getName(), 0, 0);
+                QUERY, name, 0, 0);
     }
 
     @SneakyThrows
@@ -287,10 +291,10 @@ public class DatabaseService {
     }
 
     @SneakyThrows
-    public void deleteFromPlaylist(String name, DeleteFromPlaylistRequest request) {
+    public void deleteFromPlaylist(String name, String uri) {
         var QUERY = "DELETE FROM playlist_entry " +
                 "WHERE uri = ? AND playlistId = (SELECT id FROM playlist WHERE name = ?)";
-        db.getJdbcTemplate().update(QUERY, new Object[]{request.getUri(), name});
+        db.getJdbcTemplate().update(QUERY, new Object[]{uri, name});
     }
 
     @SneakyThrows
@@ -340,17 +344,17 @@ public class DatabaseService {
     }
 
     @SneakyThrows
-    public void toggleLike(ToggleLikeRequest request) {
-        var QUERY = "UPDATE entry SET liked = :like WHERE uri = :uri";
-        db.update(QUERY, new BeanPropertySqlParameterSource(request));
+    public void toggleLike(String uri, boolean like) {
+        var QUERY = "UPDATE entry SET liked = ? WHERE uri = ?";
+        db.getJdbcTemplate().update(QUERY, new Object[]{like, uri});
     }
 
     @SneakyThrows
-    public Liked isLiked(ResolveRequest request) {
-        var QUERY = "select liked from entry where uri = :uri";
-        var isLiked = db.queryForObject(
+    public Liked isLiked(String uri) {
+        var QUERY = "select liked from entry where uri = ?";
+        var isLiked = db.getJdbcTemplate().queryForObject(
                 QUERY,
-                new BeanPropertySqlParameterSource(request),
+                new Object[]{uri},
                 boolean.class
         );
         var ret = new Liked();

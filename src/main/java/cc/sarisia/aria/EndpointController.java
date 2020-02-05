@@ -17,17 +17,11 @@ import javax.validation.Valid;
 @RestController
 public class EndpointController {
     // http://gyamin.hatenablog.com/entry/2017/04/01/225746
+    private final DatabaseService db;
+
     @Autowired
-    private DatabaseService db;
-
-    @GetMapping("/")
-    public Gaiji getRoot() {
-        return new Gaiji();
-    }
-
-    @PostMapping("/")
-    public Gaiji postGaiji(@RequestBody Gaiji gaiji) {
-        return gaiji;
+    public EndpointController(DatabaseService db) {
+        this.db = db;
     }
 
     @SneakyThrows
@@ -51,9 +45,9 @@ public class EndpointController {
 
     // TODO: yes I know this sucks.
     @SneakyThrows
-    @PostMapping("/cache/resolve")
-    public Entry getCacheResolve(@RequestBody @Valid ResolveRequest request) {
-        return db.resolveCache(request);
+    @GetMapping("/cache")
+    public Entry getCacheResolve(@RequestParam(name = "uri") String uri) {
+        return db.resolveCache(uri);
     }
 
     @SneakyThrows
@@ -64,14 +58,13 @@ public class EndpointController {
     }
 
     @SneakyThrows
-    @PostMapping("/gpm")
-    public ExtendedGPMEntry resolveGPM(@RequestBody @Valid ResolveRequest request) {
-        System.out.println(request.toString());
-        return db.resolveGPM(request);
+    @GetMapping("/gpm")
+    public ExtendedGPMEntry resolveGPM(@RequestParam(name = "uri") String uri) {
+        return db.resolveGPM(uri);
     }
 
     @SneakyThrows
-    @GetMapping("/gpm")
+    @GetMapping("/gpm/search")
     public SearchGPMResult searchGPM(
             @RequestParam(name = "query") String query,
             @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
@@ -88,8 +81,8 @@ public class EndpointController {
 
     @SneakyThrows
     @PostMapping("/playlist")
-    public ResponseEntity<Object> postPlaylist(@RequestBody @Valid CreatePlaylistRequest request) {
-        db.createPlaylist(request);
+    public ResponseEntity<Object> postPlaylist(@RequestParam(name = "name") String name) {
+        db.createPlaylist(name);
         return ResponseEntity.ok().body(null);
     }
 
@@ -125,9 +118,9 @@ public class EndpointController {
     @DeleteMapping("/playlist/{name}")
     public ResponseEntity<Object> deleteFromPlaylist(
             @PathVariable(name = "name") String name,
-            @RequestBody @Valid DeleteFromPlaylistRequest request
+            @RequestParam(name = "uri") String uri
     ) {
-        db.deleteFromPlaylist(name, request);
+        db.deleteFromPlaylist(name, uri);
         return ResponseEntity.ok().body(null);
     }
 
@@ -142,15 +135,18 @@ public class EndpointController {
 
     @SneakyThrows
     @PostMapping("/likes")
-    public ResponseEntity<Object> toggleLike(@RequestBody @Valid ToggleLikeRequest request) {
-        db.toggleLike(request);
+    public ResponseEntity<Object> toggleLike(
+            @RequestParam(name = "uri") String uri,
+            @RequestParam(name = "like") boolean like
+    ) {
+        db.toggleLike(uri, like);
         return ResponseEntity.ok().body(null);
     }
 
     @SneakyThrows
     @PostMapping("/likes/resolve")
-    public Liked resolveLike(@RequestBody @Valid ResolveRequest request) {
-        return db.isLiked(request);
+    public Liked resolveLike(@RequestParam(name = "uri") String uri) {
+        return db.isLiked(uri);
     }
 
     // error handler
