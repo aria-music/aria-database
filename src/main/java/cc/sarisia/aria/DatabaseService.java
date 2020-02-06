@@ -64,7 +64,7 @@ public class DatabaseService {
     }
 
     @SneakyThrows
-    public void insertCache(InsertRequest request) {
+    public void insertCache(BatchRequest<Entry> request) {
         var QUERY = "INSERT INTO entry VALUES (:uri, :provider, :title, :thumbnail, :liked, :meta)";
         // https://stackoverflow.com/questions/28319064/java-8-best-way-to-transform-a-list-map-or-foreach
         var paramsArray = request.getEntries().stream()
@@ -95,7 +95,7 @@ public class DatabaseService {
 
     @SneakyThrows
     @Transactional
-    public void updateGPM(UpdateGPMRequest request) {
+    public void updateGPM(BatchRequest<GPMEntry> request) {
         var params = request.getEntries().stream()
                 .map(BeanPropertySqlParameterSource::new)
                 .toArray(BeanPropertySqlParameterSource[]::new);
@@ -273,7 +273,7 @@ public class DatabaseService {
     }
 
     @SneakyThrows
-    public void addToPlaylist(String name, AddToPlaylistRequest request) {
+    public void addToPlaylist(String name, BatchRequest<String> request) {
         // TODO: check query plans, determine whether to use sub query or not
         var PLID_QUERY = "SELECT id FROM playlist where name = ?";
         var plID = db.getJdbcTemplate().queryForObject(
@@ -283,7 +283,7 @@ public class DatabaseService {
         );
 
         var QUERY = "INSERT INTO playlist_entry VALUES (:id, :uri, :thumbnail)";
-        var paramsArray = request.getUris().stream()
+        var paramsArray = request.getEntries().stream()
                 .map(u -> new AddToPlaylistSQLParams(plID, u, true))
                 .map(BeanPropertySqlParameterSource::new)
                 .toArray(BeanPropertySqlParameterSource[]::new);

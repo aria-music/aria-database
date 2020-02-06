@@ -2,6 +2,7 @@ package cc.sarisia.aria;
 
 import cc.sarisia.aria.models.AriaException;
 import cc.sarisia.aria.models.Entry;
+import cc.sarisia.aria.models.GPMEntry;
 import cc.sarisia.aria.models.Playlist;
 import cc.sarisia.aria.models.request.*;
 import cc.sarisia.aria.models.response.*;
@@ -35,15 +36,13 @@ public class EndpointController {
         return db.search(query, provider, offset, limit);
     }
 
-    // TODO: more RESTful!
     @SneakyThrows
     @PostMapping("/cache")
-    public ResponseEntity<Object> postCacheNew(@RequestBody @Valid InsertRequest request) {
+    public ResponseEntity<Object> postCacheNew(@RequestBody @Valid BatchRequest<Entry> request) {
         db.insertCache(request);
         return ResponseEntity.ok().body(null);
     }
 
-    // TODO: yes I know this sucks.
     @SneakyThrows
     @GetMapping("/cache")
     public Entry getCacheResolve(@RequestParam(name = "uri") String uri) {
@@ -52,7 +51,7 @@ public class EndpointController {
 
     @SneakyThrows
     @PostMapping("/gpm/update")
-    public ResponseEntity<Object> udpateGPM(@RequestBody @Valid UpdateGPMRequest request) {
+    public ResponseEntity<Object> udpateGPM(@RequestBody @Valid BatchRequest<GPMEntry> request) {
         db.updateGPM(request);
         return ResponseEntity.ok().body(null);
     }
@@ -108,7 +107,7 @@ public class EndpointController {
     @PostMapping("/playlist/{name}")
     public ResponseEntity<Object> addToPlaylistEntry(
             @PathVariable("name") String name,
-            @RequestBody @Valid AddToPlaylistRequest request
+            @RequestBody @Valid BatchRequest<String> request
     ) {
         db.addToPlaylist(name, request);
         return ResponseEntity.ok().body(null);
