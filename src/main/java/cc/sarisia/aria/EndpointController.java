@@ -146,7 +146,7 @@ public class EndpointController {
     }
 
     @SneakyThrows
-    @PostMapping("/likes/resolve")
+    @GetMapping("/likes/resolve")
     public Liked resolveLike(@RequestParam(name = "uri") String uri) {
         return db.isLiked(uri);
     }
