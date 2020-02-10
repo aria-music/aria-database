@@ -95,7 +95,10 @@ public class DatabaseService {
 
     @SneakyThrows
     @Transactional
-    public void updateGPM(BatchRequest<GPMEntry> request) {
+    public void updateGPM(String name, BatchRequest<GPMEntry> request) {
+        var DEL_QUERY = "DELETE FROM gpm_meta WHERE gpmUser = ?";
+        db.getJdbcTemplate().update(DEL_QUERY, name);
+
         var params = request.getEntries().stream()
                 .map(BeanPropertySqlParameterSource::new)
                 .toArray(BeanPropertySqlParameterSource[]::new);

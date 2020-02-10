@@ -51,8 +51,11 @@ public class EndpointController {
 
     @SneakyThrows
     @PostMapping("/gpm/update")
-    public ResponseEntity<Object> udpateGPM(@RequestBody @Valid BatchRequest<GPMEntry> request) {
-        db.updateGPM(request);
+    public ResponseEntity<Object> udpateGPM(
+            @RequestParam(name = "name") String name,
+            @RequestBody @Valid BatchRequest<GPMEntry> request
+    ) {
+        db.updateGPM(name, request);
         return ResponseEntity.ok().body(null);
     }
 
