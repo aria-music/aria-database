@@ -1,5 +1,6 @@
 package cc.sarisia.aria.models;
 
+import cc.sarisia.aria.models.response.ExtendedGPMEntry;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -58,5 +59,9 @@ public class GPMEntry {
         entry.setTitle(this.toFullTitle());
         entry.setThumbnail(this.getThumbnail());
         return entry;
+    }
+
+    public ExtendedGPMEntry toExtendedGPMEntry() {
+        return new ExtendedGPMEntry(this.toEntry());
     }
 }

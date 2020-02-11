@@ -8,6 +8,7 @@ import cc.sarisia.aria.models.response.*;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.BeanPropertySqlParameterSource;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -26,50 +27,45 @@ public class DatabaseService {
         this.db = db;
     }
 
-    @SneakyThrows
-    public SearchResult search(String query, String provider, int offset, int limit) {
-        var QUERY = "SELECT * FROM entry WHERE title LIKE :query ORDER BY title ASC LIMIT :limit OFFSET :offset";
-        var COUNT_QUERY = "SELECT COUNT(title) FROM entry WHERE title LIKE :query";
-        if (provider != null) {
-            // java dont't have multiline string
-            // fuck java use kotlin
-            QUERY = "SELECT * FROM entry " +
-                    "WHERE provider = :provider AND title LIKE :query ORDER BY title ASC " +
-                    "LIMIT :limit OFFSET :offset";
-            COUNT_QUERY = "SELECT COUNT(title) FROM entry WHERE provider = :provider AND title LIKE :query";
-        }
-        var params = new MapSqlParameterSource()
-                .addValue("query", toSQLQueryString(query))
-                .addValue("provider", provider)
-                .addValue("limit", limit)
-                .addValue("offset", offset);
-        var count = db.queryForObject(COUNT_QUERY, params, int.class);
-        var rows = db.query(
-                QUERY,
-                params,
-                (rs, i) -> {
-                    var entry = new Entry();
-                    entry.setUri(rs.getString(1));
-                    entry.setProvider(rs.getString(2));
-                    entry.setTitle(rs.getString(3));
-                    entry.setThumbnail(rs.getString(4));
-                    entry.setLiked(rs.getBoolean(5));
-                    entry.setMeta(rs.getString(6));
-                    return entry;
-                });
-        var result = new SearchResult();
-        result.setHit(count);
-        result.setResults(rows);
-        return result;
-    }
+    private static final RowMapper<Entry> ENTRY_ROW_MAPPER = (rs, i) -> {
+        var entry = new Entry();
+        entry.setUri(rs.getString(1));
+        entry.setProvider(rs.getString(2));
+        entry.setTitle(rs.getString(3));
+        entry.setThumbnail(rs.getString(4));
+        entry.setLiked(rs.getBoolean(5));
+        entry.setMeta(rs.getString(6));
+        return entry;
+    };
+
+    private static final RowMapper<GPMEntry> GPM_ENTRY_ROW_MAPPER = (rs, i) -> {
+        var entry = new GPMEntry();
+        entry.setUri(rs.getString(1));
+        entry.setGpmUser(rs.getString(2));
+        entry.setId(rs.getString(3));
+        entry.setTitle(rs.getString(4));
+        entry.setArtist(rs.getString(5));
+        entry.setAlbum(rs.getString(6));
+        entry.setThumbnail(rs.getString(7));
+        return entry;
+    };
+
+    private static final RowMapper<Playlist> PLAYLIST_ROW_MAPPER = (rs, i) -> {
+        var pl = new Playlist();
+        pl.setId(rs.getInt(1));
+        pl.setName(rs.getString(2));
+        pl.setOwnerId(rs.getInt(3));
+        pl.setGroupId(rs.getInt(4));
+        return pl;
+    };
 
     @SneakyThrows
     public void insertCache(BatchRequest<Entry> request) {
         var QUERY = "INSERT INTO entry VALUES (:uri, :provider, :title, :thumbnail, :liked, :meta)";
         // https://stackoverflow.com/questions/28319064/java-8-best-way-to-transform-a-list-map-or-foreach
+        // https://stackoverflow.com/questions/29447561/how-do-java-8-array-constructor-references-work
         var paramsArray = request.getEntries().stream()
                 .map(BeanPropertySqlParameterSource::new)
-                // https://stackoverflow.com/questions/29447561/how-do-java-8-array-constructor-references-work
                 .toArray(BeanPropertySqlParameterSource[]::new);
         db.batchUpdate(QUERY, paramsArray);
     }
@@ -80,16 +76,7 @@ public class DatabaseService {
         return db.getJdbcTemplate().queryForObject(
                 QUERY,
                 new Object[]{uri},
-                (rs, i) -> {
-                    var entry = new Entry();
-                    entry.setUri(rs.getString(1));
-                    entry.setProvider(rs.getString(2));
-                    entry.setTitle(rs.getString(3));
-                    entry.setThumbnail(rs.getString(4));
-                    entry.setLiked(rs.getBoolean(5));
-                    entry.setMeta(rs.getString(6));
-                    return entry;
-                }
+                ENTRY_ROW_MAPPER
         );
     }
 
@@ -104,10 +91,7 @@ public class DatabaseService {
                 .toArray(BeanPropertySqlParameterSource[]::new);
         var GPM_QUERY = "INSERT INTO gpm_meta " +
                 "VALUES (:uri, :gpmUser, :id, :title, :artist, :album, :thumbnail, :thumbnailSmall)";
-//        var QUERY = "INSERT INTO entry " +
-//                "VALUES (:uri, 'gpm', :fullTitle, :thumbnail, false, NULL)";
         db.batchUpdate(GPM_QUERY, params);
-//        db.batchUpdate(QUERY, params);
     }
 
     @SneakyThrows
@@ -116,35 +100,16 @@ public class DatabaseService {
         var gpm = db.getJdbcTemplate().queryForObject(
                 QUERY,
                 new Object[]{uri},
-                (rs, i) -> {
-                    var g = new GPMEntry();
-                    g.setUri(rs.getString(1));
-                    g.setGpmUser(rs.getString(2));
-                    g.setId(rs.getString(3));
-                    g.setTitle(rs.getString(4));
-                    g.setArtist(rs.getString(5));
-                    g.setAlbum(rs.getString(6));
-                    g.setThumbnail(rs.getString(7));
-                    return g;
-                }
+                GPM_ENTRY_ROW_MAPPER
         );
-        var ret = new ExtendedGPMEntry();
-        ret.setUri(gpm.getUri());
-        ret.setProvider("gpm");
-        ret.setTitle(gpm.toFullTitle());
-        ret.setThumbnail(gpm.getThumbnail());
-        ret.setMeta(gpm);
+        var ret = gpm.toExtendedGPMEntry();
         var INSERT_QUERY = "INSERT INTO entry " +
-                "VALUES (?, ?, ?, ?, ?, ?) " +
+                "VALUES (:uri, :provider, :title, :thumbnail, :liked, :meta) " +
                 "ON CONFLICT DO NOTHING";
-        db.getJdbcTemplate().update(
+        db.update(
                 INSERT_QUERY,
-                ret.getUri(),
-                ret.getProvider(),
-                ret.getTitle(),
-                ret.getThumbnail(),
-                false,
-                null);
+                new BeanPropertySqlParameterSource(ret)
+        );
         return ret;
     }
 
@@ -156,17 +121,7 @@ public class DatabaseService {
         var results = db.getJdbcTemplate().query(
                 QUERY,
                 new Object[]{toSQLQueryString(query), limit, offset},
-                (rs, i) -> {
-                    var g = new GPMEntry();
-                    g.setUri(rs.getString(1));
-                    g.setGpmUser(rs.getString(2));
-                    g.setId(rs.getString(3));
-                    g.setTitle(rs.getString(4));
-                    g.setArtist(rs.getString(5));
-                    g.setAlbum(rs.getString(6));
-                    g.setThumbnail(rs.getString(7));
-                    return g;
-                }
+                GPM_ENTRY_ROW_MAPPER
         );
 
 //        var entries = results.stream()
@@ -182,14 +137,7 @@ public class DatabaseService {
         var QUERY = "SELECT * FROM playlist ORDER BY name ASC";
         var playlists = db.query(
                 QUERY,
-                (rs, i) -> {
-                    var pl = new Playlist();
-                    pl.setId(rs.getInt(1));
-                    pl.setName(rs.getString(2));
-                    pl.setOwnerId(rs.getInt(3));
-                    pl.setGroupId(rs.getInt(4));
-                    return pl;
-                }
+                PLAYLIST_ROW_MAPPER
         );
 
         var THUMBNAIL_QUERY = "SELECT thumbnail FROM playlist_entry JOIN entry USING (uri) " +
@@ -225,14 +173,7 @@ public class DatabaseService {
         var playlist = db.getJdbcTemplate().queryForObject(
                 PLAYLIST_QUERY,
                 new Object[]{name},
-                (rs, i) -> {
-                    var pl = new Playlist();
-                    pl.setId(rs.getInt(1));
-                    pl.setName(rs.getString(2));
-                    pl.setOwnerId(rs.getInt(3));
-                    pl.setGroupId(rs.getInt(4));
-                    return pl;
-                }
+                PLAYLIST_ROW_MAPPER
         );
 
         var params = new MapSqlParameterSource()
@@ -318,21 +259,12 @@ public class DatabaseService {
         var entries = db.getJdbcTemplate().query(
             QUERY,
             new Object[]{limit, offset},
-            (rs, i) -> {
-                var entry = new Entry();
-                entry.setUri(rs.getString(1));
-                entry.setProvider(rs.getString(2));
-                entry.setTitle(rs.getString(3));
-                entry.setThumbnail(rs.getString(4));
-                if (entry.getThumbnail() != "") {
-                    thn.add(entry.getThumbnail());
-                }
-                entry.setLiked(rs.getBoolean(5));
-                entry.setMeta(rs.getString(6));
-                return entry;
-            }
+            ENTRY_ROW_MAPPER
         );
 
+        entries.stream()
+                .filter(e -> !e.getThumbnail().equals(""))
+                .forEach(e -> thn.add(e.getThumbnail()));
         var pl = new Playlist();
         pl.setId(-1);
         pl.setName("Likes");

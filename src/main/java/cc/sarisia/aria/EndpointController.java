@@ -26,17 +26,6 @@ public class EndpointController {
     }
 
     @SneakyThrows
-    @GetMapping("/search")
-    public SearchResult postSearch(
-            @RequestParam(name = "query") String query,
-            @RequestParam(name = "provider", required = false) String provider,
-            @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
-            @RequestParam(name = "limit", defaultValue = "50", required = false) int limit
-    ) {
-        return db.search(query, provider, offset, limit);
-    }
-
-    @SneakyThrows
     @PostMapping("/cache")
     public ResponseEntity<Object> postCacheNew(@RequestBody @Valid BatchRequest<Entry> request) {
         db.insertCache(request);
