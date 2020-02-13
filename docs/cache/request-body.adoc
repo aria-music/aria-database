@@ -1,0 +1,23 @@
+[source,options="nowrap"]
+----
+{
+    "entries": [
+        {
+            "uri": "https://www.youtube.com/watch?v=5BnhQbcPrBg",
+            "provider": "youtube",
+            "title": "【新衣装で】ビースト・ダンス　歌ってみた【相羽ういは/にじさんじ】",
+            "thumbnail": "https://i.ytimg.com/vi/5BnhQbcPrBg/maxresdefault.jpg",
+            "liked": false,
+            "meta": "UihaCute"
+        },
+        {
+            "uri": "https://www.youtube.com/watch?v=z3tukOqkjyc",
+            "provider": "youtube",
+            "title": "【】歌ってみた 疑心暗鬼 葛葉 にじさん【】",
+            "thumbnail": "https://i.ytimg.com/vi/z3tukOqkjyc/maxresdefault.jpg",
+            "liked": false,
+            "meta": "KuzuhaCool"
+        }
+    ]
+}
+----

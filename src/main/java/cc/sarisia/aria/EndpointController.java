@@ -1,14 +1,13 @@
 package cc.sarisia.aria;
 
-import cc.sarisia.aria.models.AriaException;
 import cc.sarisia.aria.models.Entry;
 import cc.sarisia.aria.models.GPMEntry;
 import cc.sarisia.aria.models.Playlist;
-import cc.sarisia.aria.models.request.*;
+import cc.sarisia.aria.models.request.BatchRequest;
 import cc.sarisia.aria.models.response.*;
-import cc.sarisia.aria.models.response.Error;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -140,9 +139,13 @@ public class EndpointController {
         return db.isLiked(uri);
     }
 
-    // error handler
-    @ExceptionHandler(AriaException.class)
-    public ResponseEntity<Error> getException(AriaException e) {
-        return new ResponseEntity<>(new Error(e), HttpStatus.BAD_REQUEST);
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ErrorResponse> onDataAccessException(DataAccessException e) {
+        return new ResponseEntity<>(new ErrorResponse(e.getMessage()), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> onException(Exception e) {
+        return new ResponseEntity<>(new ErrorResponse(e.getMessage()), HttpStatus.BAD_REQUEST);
     }
 }
