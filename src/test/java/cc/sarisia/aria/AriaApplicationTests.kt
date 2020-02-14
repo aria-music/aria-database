@@ -25,7 +25,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @SpringBootTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @AutoConfigureMockMvc
-@AutoConfigureRestDocs(outputDir = "docs")
+@AutoConfigureRestDocs(outputDir = "docs-artifact/snippets")
 class AriaApplicationTests {
     @Autowired
     lateinit var mvc: MockMvc
@@ -86,30 +86,30 @@ class AriaApplicationTests {
                 )))
     }
 
-    @Test
-    @Order(2)
-    fun testCacheInsertDuplicate() {
-        this.mvc.perform(
-                post("/cache")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                            {
-                                "entries": [
-                                    {
-                                        "uri": "https://www.youtube.com/watch?v=5BnhQbcPrBg",
-                                        "provider": "youtube",
-                                        "title": "【新衣装で】ビースト・ダンス　歌ってみた【相羽ういは/にじさんじ】",
-                                        "thumbnail": "https://i.ytimg.com/vi/5BnhQbcPrBg/maxresdefault.jpg",
-                                        "liked": false,
-                                        "meta": "UihaCute"
-                                    }
-                                ]
-                            }
-                        """.trimIndent())
-        )
-                .andDo(print())
-                .andExpect(status().isOk)
-    }
+//    @Test
+//    @Order(2)
+//    fun testCacheInsertDuplicate() {
+//        this.mvc.perform(
+//                post("/cache")
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content("""
+//                            {
+//                                "entries": [
+//                                    {
+//                                        "uri": "https://www.youtube.com/watch?v=5BnhQbcPrBg",
+//                                        "provider": "youtube",
+//                                        "title": "【新衣装で】ビースト・ダンス　歌ってみた【相羽ういは/にじさんじ】",
+//                                        "thumbnail": "https://i.ytimg.com/vi/5BnhQbcPrBg/maxresdefault.jpg",
+//                                        "liked": false,
+//                                        "meta": "UihaCute"
+//                                    }
+//                                ]
+//                            }
+//                        """.trimIndent())
+//        )
+//                .andDo(print())
+//                .andExpect(status().isOk)
+//    }
 
     @Test
     fun testCacheInsertEmptyBody() {

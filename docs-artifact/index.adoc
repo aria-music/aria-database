@@ -1,0 +1,17 @@
+// preview!
+:snippets: snippets
+
+= Aria Database API
+
+== Cache
+
+=== Insert cache
+
+==== Request
+
+include::{snippets}/cache/http-request.adoc[]
+include::{snippets}/cache/request-fields.adoc[]
+
+==== Response
+
+include::{snippets}/cache/http-response.adoc[]

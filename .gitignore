@@ -1,6 +1,8 @@
 HELP.md
 .gradle
-build/
+/build
+/bin
+/docs-artifact/snippets
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**
 !**/src/test/**

@@ -1,7 +1,0 @@
-= Aria Database
-
-== Endpoint
-
-=== POST `/cache`
-include::docs/cache/http-request.adoc[]
-include::docs/cache/http-response.adoc[]
