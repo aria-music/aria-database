@@ -45,11 +45,12 @@ public class GPMEntry {
 
     public void setThumbnail(String thumbnail) {
         this.thumbnail = thumbnail;
-        this.setThumbnailSmall(thumbnail+"=s158-c-e100-rwu-v1");
+        if (thumbnail != null)
+            this.setThumbnailSmall(thumbnail+"=s158-c-e100-rwu-v1");
     }
 
     public String toFullTitle() {
-        return this.title + " - " + this.artist + " - " + this.album;
+        return this.title + " - " + this.artist;
     }
 
     public Entry toEntry() {
@@ -62,6 +63,6 @@ public class GPMEntry {
     }
 
     public ExtendedGPMEntry toExtendedGPMEntry() {
-        return new ExtendedGPMEntry(this.toEntry());
+        return new ExtendedGPMEntry(this);
     }
 }

@@ -5,13 +5,19 @@
 
 == Cache
 
-=== Insert cache
+=== Insert
 
 ==== Request
 
-include::{snippets}/cache/http-request.adoc[]
-include::{snippets}/cache/request-fields.adoc[]
+include::{snippets}/cache/insert/http-request.adoc[]
+include::{snippets}/cache/insert/request-fields.adoc[]
 
 ==== Response
 
-include::{snippets}/cache/http-response.adoc[]
+include::{snippets}/cache/insert/http-response.adoc[]
+
+=== Get
+
+==== Request
+
+include::{snippets}/cache/get/http-request.adoc[]

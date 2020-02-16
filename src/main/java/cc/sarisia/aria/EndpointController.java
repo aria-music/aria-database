@@ -3,6 +3,8 @@ package cc.sarisia.aria;
 import cc.sarisia.aria.models.Entry;
 import cc.sarisia.aria.models.GPMEntry;
 import cc.sarisia.aria.models.Playlist;
+import cc.sarisia.aria.models.exception.AlreadyExistsException;
+import cc.sarisia.aria.models.exception.NoEntryException;
 import cc.sarisia.aria.models.request.BatchRequest;
 import cc.sarisia.aria.models.response.*;
 import lombok.SneakyThrows;
@@ -139,9 +141,15 @@ public class EndpointController {
         return db.isLiked(uri);
     }
 
-    @ExceptionHandler(DataAccessException.class)
-    public ResponseEntity<ErrorResponse> onDataAccessException(DataAccessException e) {
+    // TODO: extract nested Exception to handler more accurately!
+    @ExceptionHandler(NoEntryException.class)
+    public ResponseEntity<ErrorResponse> onNoEntryException(NoEntryException e) {
         return new ResponseEntity<>(new ErrorResponse(e.getMessage()), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(AlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> onAlreadyExistsException(AlreadyExistsException e) {
+        return new ResponseEntity<>(new ErrorResponse(e.getMessage()), HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(Exception.class)

@@ -3,6 +3,8 @@ package cc.sarisia.aria;
 import cc.sarisia.aria.models.Entry;
 import cc.sarisia.aria.models.GPMEntry;
 import cc.sarisia.aria.models.Playlist;
+import cc.sarisia.aria.models.exception.AlreadyExistsException;
+import cc.sarisia.aria.models.exception.NoEntryException;
 import cc.sarisia.aria.models.request.*;
 import cc.sarisia.aria.models.response.*;
 import lombok.SneakyThrows;
@@ -15,7 +17,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.validation.constraints.Null;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Repository
@@ -59,25 +63,31 @@ public class DatabaseService {
         return pl;
     };
 
-    @SneakyThrows
-    public void insertCache(BatchRequest<Entry> request) {
+    public void insertCache(BatchRequest<Entry> request) throws AlreadyExistsException {
         var QUERY = "INSERT INTO entry VALUES (:uri, :provider, :title, :thumbnail, :liked, :meta)";
         // https://stackoverflow.com/questions/28319064/java-8-best-way-to-transform-a-list-map-or-foreach
         // https://stackoverflow.com/questions/29447561/how-do-java-8-array-constructor-references-work
         var paramsArray = request.getEntries().stream()
                 .map(BeanPropertySqlParameterSource::new)
                 .toArray(BeanPropertySqlParameterSource[]::new);
-        db.batchUpdate(QUERY, paramsArray);
+        try {
+            db.batchUpdate(QUERY, paramsArray);
+        } catch (Exception e) {
+            throw new AlreadyExistsException(e);
+        }
     }
 
-    @SneakyThrows
-    public Entry resolveCache(String uri) {
+    public Entry resolveCache(String uri) throws NoEntryException {
         var QUERY = "SELECT * FROM entry WHERE uri = ?";
-        return db.getJdbcTemplate().queryForObject(
-                QUERY,
-                new Object[]{uri},
-                ENTRY_ROW_MAPPER
-        );
+        try {
+            return db.getJdbcTemplate().queryForObject(
+                    QUERY,
+                    new Object[]{uri},
+                    ENTRY_ROW_MAPPER
+            );
+        } catch (Exception e) {
+            throw new NoEntryException(e);
+        }
     }
 
     @SneakyThrows
@@ -94,17 +104,22 @@ public class DatabaseService {
         db.batchUpdate(GPM_QUERY, params);
     }
 
-    @SneakyThrows
-    public ExtendedGPMEntry resolveGPM(String uri) {
-        var QUERY = "SELECT * FROM gpm_meta WHERE id = ?";
-        var gpm = db.getJdbcTemplate().queryForObject(
-                QUERY,
-                new Object[]{uri},
-                GPM_ENTRY_ROW_MAPPER
-        );
+    public ExtendedGPMEntry resolveGPM(String uri) throws NoEntryException {
+        var QUERY = "SELECT * FROM gpm_meta WHERE uri = ?";
+        GPMEntry gpm;
+        try {
+            gpm = db.getJdbcTemplate().queryForObject(
+                    QUERY,
+                    new Object[]{uri},
+                    GPM_ENTRY_ROW_MAPPER
+            );
+        } catch (Exception e) {
+            throw new NoEntryException(e);
+        }
+
         var ret = gpm.toExtendedGPMEntry();
         var INSERT_QUERY = "INSERT INTO entry " +
-                "VALUES (:uri, :provider, :title, :thumbnail, :liked, :meta) " +
+                "VALUES (:uri, :provider, :title, :thumbnail, :liked, NULL) " +
                 "ON CONFLICT DO NOTHING";
         db.update(
                 INSERT_QUERY,
@@ -124,26 +139,27 @@ public class DatabaseService {
                 GPM_ENTRY_ROW_MAPPER
         );
 
-//        var entries = results.stream()
-//                .map(e -> e.toEntry())
-//                .collect(Collectors.toList());
         var ret = new SearchGPMResult();
         ret.setResults(results);
         return ret;
     }
 
-    @SneakyThrows
-    public Playlists showPlaylists() {
+    public Playlists showPlaylists() throws NoEntryException {
         var QUERY = "SELECT * FROM playlist ORDER BY name ASC";
-        var playlists = db.query(
-                QUERY,
-                PLAYLIST_ROW_MAPPER
-        );
+        List<Playlist> playlists;
+        try {
+            playlists = db.query(
+                    QUERY,
+                    PLAYLIST_ROW_MAPPER
+            );
+        } catch (Exception e) {
+            throw new NoEntryException(e);
+        }
 
         var THUMBNAIL_QUERY = "SELECT thumbnail FROM playlist_entry JOIN entry USING (uri) " +
                 "WHERE playlistId = ? AND isThumbnail = true AND thumbnail != ''";
         var COUNT_QUERY = "SELECT count(*) FROM playlist_entry WHERE playlistId = ?";
-        // TODO: concurrent
+        // TODO: concurrent?
         for (var pl: playlists) {
             var thumbnails = db.getJdbcTemplate().queryForList(
                     THUMBNAIL_QUERY,
@@ -160,21 +176,28 @@ public class DatabaseService {
         return pls;
     }
 
-    @SneakyThrows
-    public void createPlaylist(String name) {
+    public void createPlaylist(String name) throws AlreadyExistsException {
         var QUERY = "INSERT INTO playlist VALUES (DEFAULT, ?, ?, ?)";
-        db.getJdbcTemplate().update(
-                QUERY, name, 0, 0);
+        try {
+            db.getJdbcTemplate().update(
+                    QUERY, name, 0, 0);
+        } catch (Exception e) {
+            throw new AlreadyExistsException(e);
+        }
     }
 
-    @SneakyThrows
-    public Playlist playlist(String name, String query, int limit, int offset) {
+    public Playlist playlist(String name, String query, int limit, int offset) throws NoEntryException {
         var PLAYLIST_QUERY = "SELECT * from playlist where name = ?";
-        var playlist = db.getJdbcTemplate().queryForObject(
-                PLAYLIST_QUERY,
-                new Object[]{name},
-                PLAYLIST_ROW_MAPPER
-        );
+        Playlist playlist;
+        try {
+            playlist = db.getJdbcTemplate().queryForObject(
+                    PLAYLIST_QUERY,
+                    new Object[]{name},
+                    PLAYLIST_ROW_MAPPER
+            );
+        } catch (Exception e) {
+            throw new NoEntryException(e);
+        }
 
         var params = new MapSqlParameterSource()
                 .addValue("plid", playlist.getId())
@@ -216,22 +239,35 @@ public class DatabaseService {
         return playlist;
     }
 
-    @SneakyThrows
-    public void addToPlaylist(String name, BatchRequest<String> request) {
+    public void addToPlaylist(String name, BatchRequest<String> request)
+            throws NoEntryException, AlreadyExistsException {
         // TODO: check query plans, determine whether to use sub query or not
         var PLID_QUERY = "SELECT id FROM playlist where name = ?";
-        var plID = db.getJdbcTemplate().queryForObject(
-                PLID_QUERY,
-                new Object[]{name},
-                int.class
-        );
+        Integer plID;
+        try {
+            plID = db.getJdbcTemplate().queryForObject(
+                    PLID_QUERY,
+                    new Object[]{name},
+                    Integer.class
+            );
+        } catch (Exception e) {
+            throw new NoEntryException(e);
+        }
+
+        if (plID == null) {
+            throw new NoEntryException(null);
+        }
 
         var QUERY = "INSERT INTO playlist_entry VALUES (:id, :uri, :thumbnail)";
         var paramsArray = request.getEntries().stream()
                 .map(u -> new AddToPlaylistSQLParams(plID, u, true))
                 .map(BeanPropertySqlParameterSource::new)
                 .toArray(BeanPropertySqlParameterSource[]::new);
-        db.batchUpdate(QUERY, paramsArray);
+        try {
+            db.batchUpdate(QUERY, paramsArray);
+        } catch (Exception e) {
+            throw new AlreadyExistsException(e);
+        }
     }
 
     @SneakyThrows

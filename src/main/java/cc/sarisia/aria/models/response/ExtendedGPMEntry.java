@@ -14,11 +14,13 @@ public class ExtendedGPMEntry extends BaseEntry {
     @Getter @Setter
     private GPMEntry meta;
 
-    public ExtendedGPMEntry(BaseEntry base) {
+    public ExtendedGPMEntry(GPMEntry gpm) {
+        var base = gpm.toEntry();
         this.setUri(base.getUri());
         this.setProvider(base.getProvider());
         this.setTitle(base.getTitle());
         this.setThumbnail(base.getThumbnail());
         this.setLiked(base.isLiked());
+        this.setMeta(gpm);
     }
 }
