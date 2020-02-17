@@ -1,37 +1,26 @@
 package cc.sarisia.aria.models.response;
 
-import cc.sarisia.aria.models.Entry;
+import cc.sarisia.aria.models.BaseEntry;
 import cc.sarisia.aria.models.GPMEntry;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.validation.Valid;
-import javax.validation.constraints.NotBlank;
 
-public class ExtendedGPMEntry {
-    @NotBlank
-    @Getter @Setter
-    private String uri;
-
-    @NotBlank
-    @Getter @Setter
-    private String provider;
-
-    @NotBlank
-    @Getter @Setter
-    private String title;
-
-    @Setter
-    private String thumbnail;
-
-    @Getter @Setter
-    private boolean liked;
-
+@NoArgsConstructor
+public class ExtendedGPMEntry extends BaseEntry {
     @Valid
     @Getter @Setter
     private GPMEntry meta;
 
-    public String getThumbnail() {
-        return this.thumbnail == null ? "" : this.thumbnail;
+    public ExtendedGPMEntry(GPMEntry gpm) {
+        var base = gpm.toEntry();
+        this.setUri(base.getUri());
+        this.setProvider(base.getProvider());
+        this.setTitle(base.getTitle());
+        this.setThumbnail(base.getThumbnail());
+        this.setLiked(base.isLiked());
+        this.setMeta(gpm);
     }
 }

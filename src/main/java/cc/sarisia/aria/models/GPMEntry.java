@@ -1,5 +1,6 @@
 package cc.sarisia.aria.models;
 
+import cc.sarisia.aria.models.response.ExtendedGPMEntry;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -44,11 +45,12 @@ public class GPMEntry {
 
     public void setThumbnail(String thumbnail) {
         this.thumbnail = thumbnail;
-        this.setThumbnailSmall(thumbnail+"=s158-c-e100-rwu-v1");
+        if (thumbnail != null)
+            this.setThumbnailSmall(thumbnail+"=s158-c-e100-rwu-v1");
     }
 
     public String toFullTitle() {
-        return this.title + " - " + this.artist + " - " + this.album;
+        return this.title + " - " + this.artist;
     }
 
     public Entry toEntry() {
@@ -58,5 +60,9 @@ public class GPMEntry {
         entry.setTitle(this.toFullTitle());
         entry.setThumbnail(this.getThumbnail());
         return entry;
+    }
+
+    public ExtendedGPMEntry toExtendedGPMEntry() {
+        return new ExtendedGPMEntry(this);
     }
 }

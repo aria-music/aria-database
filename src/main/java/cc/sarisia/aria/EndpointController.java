@@ -1,13 +1,15 @@
 package cc.sarisia.aria;
 
-import cc.sarisia.aria.models.AriaException;
 import cc.sarisia.aria.models.Entry;
+import cc.sarisia.aria.models.GPMEntry;
 import cc.sarisia.aria.models.Playlist;
-import cc.sarisia.aria.models.request.*;
+import cc.sarisia.aria.models.exception.AlreadyExistsException;
+import cc.sarisia.aria.models.exception.NoEntryException;
+import cc.sarisia.aria.models.request.BatchRequest;
 import cc.sarisia.aria.models.response.*;
-import cc.sarisia.aria.models.response.Error;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,61 +19,44 @@ import javax.validation.Valid;
 @RestController
 public class EndpointController {
     // http://gyamin.hatenablog.com/entry/2017/04/01/225746
+    private final DatabaseService db;
+
     @Autowired
-    private DatabaseService db;
-
-    @GetMapping("/")
-    public Gaiji getRoot() {
-        return new Gaiji();
+    public EndpointController(DatabaseService db) {
+        this.db = db;
     }
 
-    @PostMapping("/")
-    public Gaiji postGaiji(@RequestBody Gaiji gaiji) {
-        return gaiji;
-    }
-
-    @SneakyThrows
-    @GetMapping("/search")
-    public SearchResult postSearch(
-            @RequestParam(name = "query") String query,
-            @RequestParam(name = "provider", required = false) String provider,
-            @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
-            @RequestParam(name = "limit", defaultValue = "50", required = false) int limit
-    ) {
-        return db.search(query, provider, offset, limit);
-    }
-
-    // TODO: more RESTful!
     @SneakyThrows
     @PostMapping("/cache")
-    public ResponseEntity<Object> postCacheNew(@RequestBody @Valid InsertRequest request) {
+    public ResponseEntity<Object> postCacheNew(@RequestBody @Valid BatchRequest<Entry> request) {
         db.insertCache(request);
         return ResponseEntity.ok().body(null);
     }
 
-    // TODO: yes I know this sucks.
     @SneakyThrows
-    @PostMapping("/cache/resolve")
-    public Entry getCacheResolve(@RequestBody @Valid ResolveRequest request) {
-        return db.resolveCache(request);
+    @GetMapping("/cache")
+    public Entry getCacheResolve(@RequestParam(name = "uri") String uri) {
+        return db.resolveCache(uri);
     }
 
     @SneakyThrows
     @PostMapping("/gpm/update")
-    public ResponseEntity<Object> udpateGPM(@RequestBody @Valid UpdateGPMRequest request) {
-        db.updateGPM(request);
+    public ResponseEntity<Object> udpateGPM(
+            @RequestParam(name = "name") String name,
+            @RequestBody @Valid BatchRequest<GPMEntry> request
+    ) {
+        db.updateGPM(name, request);
         return ResponseEntity.ok().body(null);
     }
 
     @SneakyThrows
-    @PostMapping("/gpm")
-    public ExtendedGPMEntry resolveGPM(@RequestBody @Valid ResolveRequest request) {
-        System.out.println(request.toString());
-        return db.resolveGPM(request);
+    @GetMapping("/gpm")
+    public ExtendedGPMEntry resolveGPM(@RequestParam(name = "uri") String uri) {
+        return db.resolveGPM(uri);
     }
 
     @SneakyThrows
-    @GetMapping("/gpm")
+    @GetMapping("/gpm/search")
     public SearchGPMResult searchGPM(
             @RequestParam(name = "query") String query,
             @RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
@@ -88,8 +73,8 @@ public class EndpointController {
 
     @SneakyThrows
     @PostMapping("/playlist")
-    public ResponseEntity<Object> postPlaylist(@RequestBody @Valid CreatePlaylistRequest request) {
-        db.createPlaylist(request);
+    public ResponseEntity<Object> postPlaylist(@RequestParam(name = "name") String name) {
+        db.createPlaylist(name);
         return ResponseEntity.ok().body(null);
     }
 
@@ -115,7 +100,7 @@ public class EndpointController {
     @PostMapping("/playlist/{name}")
     public ResponseEntity<Object> addToPlaylistEntry(
             @PathVariable("name") String name,
-            @RequestBody @Valid AddToPlaylistRequest request
+            @RequestBody @Valid BatchRequest<String> request
     ) {
         db.addToPlaylist(name, request);
         return ResponseEntity.ok().body(null);
@@ -125,9 +110,9 @@ public class EndpointController {
     @DeleteMapping("/playlist/{name}")
     public ResponseEntity<Object> deleteFromPlaylist(
             @PathVariable(name = "name") String name,
-            @RequestBody @Valid DeleteFromPlaylistRequest request
+            @RequestParam(name = "uri") String uri
     ) {
-        db.deleteFromPlaylist(name, request);
+        db.deleteFromPlaylist(name, uri);
         return ResponseEntity.ok().body(null);
     }
 
@@ -142,20 +127,33 @@ public class EndpointController {
 
     @SneakyThrows
     @PostMapping("/likes")
-    public ResponseEntity<Object> toggleLike(@RequestBody @Valid ToggleLikeRequest request) {
-        db.toggleLike(request);
+    public ResponseEntity<Object> toggleLike(
+            @RequestParam(name = "uri") String uri,
+            @RequestParam(name = "like") boolean like
+    ) {
+        db.toggleLike(uri, like);
         return ResponseEntity.ok().body(null);
     }
 
     @SneakyThrows
-    @PostMapping("/likes/resolve")
-    public Liked resolveLike(@RequestBody @Valid ResolveRequest request) {
-        return db.isLiked(request);
+    @GetMapping("/likes/resolve")
+    public Liked resolveLike(@RequestParam(name = "uri") String uri) {
+        return db.isLiked(uri);
     }
 
-    // error handler
-    @ExceptionHandler(AriaException.class)
-    public ResponseEntity<Error> getException(AriaException e) {
-        return new ResponseEntity<>(new Error(e), HttpStatus.BAD_REQUEST);
+    // TODO: extract nested Exception to handler more accurately!
+    @ExceptionHandler(NoEntryException.class)
+    public ResponseEntity<ErrorResponse> onNoEntryException(NoEntryException e) {
+        return new ResponseEntity<>(new ErrorResponse(e.getMessage()), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(AlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> onAlreadyExistsException(AlreadyExistsException e) {
+        return new ResponseEntity<>(new ErrorResponse(e.getMessage()), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> onException(Exception e) {
+        return new ResponseEntity<>(new ErrorResponse(e.getMessage()), HttpStatus.BAD_REQUEST);
     }
 }
