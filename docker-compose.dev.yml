@@ -1,0 +1,9 @@
+version: "3"
+services:
+  dbapp:
+    image: openjdk:11
+    volumes:
+    - ./build:/usr/src/aria-database/build:ro
+    entrypoint: java -jar /usr/src/aria-database/build/libs/aria.jar
+    ports:
+    - 8080:8080

@@ -8,10 +8,8 @@ services:
       POSTGRES_PASSWORD: music
     restart: always
   dbapp:
-    image: openjdk:11
-    entrypoint: java -jar /app/libs/aria.jar
+    build: .
+    image: aria-database:latest
     volumes:
-    - ./build:/app:ro
-    ports:
-    - 8080:8080
+    - ./config:/usr/src/aria-database/config
     restart: on-failure:3
