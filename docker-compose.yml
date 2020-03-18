@@ -6,10 +6,12 @@ services:
       POSTGRES_DB: ariadb
       POSTGRES_USER: aria
       POSTGRES_PASSWORD: music
+    volumes:
+      - aria-postgres-data:/var/lib/postgresql/data
     restart: always
   dbapp:
     build: .
     image: aria-database:latest
     volumes:
-    - ./config:/usr/src/aria-database/config
+      - ./config:/usr/src/aria-database/config
     restart: on-failure:3
