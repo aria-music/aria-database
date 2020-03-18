@@ -15,3 +15,6 @@ services:
     volumes:
       - ./config:/usr/src/aria-database/config
     restart: on-failure:3
+
+volumes:
+  aria-postgres-data:
