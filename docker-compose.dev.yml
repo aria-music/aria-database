@@ -2,6 +2,7 @@ version: "3"
 services:
   dbapp:
     image: openjdk:11
+    entrypoint: [ "java", "-jar", "/usr/src/aria-database/build/libs/aria.jar" ]
     volumes:
       - ./build:/usr/src/aria-database/build:ro
     ports:
